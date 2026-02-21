@@ -1,0 +1,23 @@
+{
+  "name": "uber-backend",
+  "version": "1.0.0",
+  "description": "This is the codebase implementing the uber webapp full backend server structure and integrating it with client part.",
+  "license": "ISC",
+  "author": "Tapabrata Chowdhury",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "npx nodemon server.js"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "mongoose": "^9.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
