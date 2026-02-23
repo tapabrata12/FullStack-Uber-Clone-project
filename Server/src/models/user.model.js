@@ -32,7 +32,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true,
         trim: true,
-        select: false,
+        select: false, // By default password will not go if someone tries to fetch user data
         minLength: [6, "Password have to be atleast 6 characters long"]
     },
 

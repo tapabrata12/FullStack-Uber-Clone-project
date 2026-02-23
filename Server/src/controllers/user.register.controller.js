@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { createUser } = require('../services/createUser.service');
-const hashPassword = require('../services/hashPassword.service');
+const {hashPassword} = require('../services/hashPassword.service');
 const genarateAuthToken = require('../services/genarateAuthToken.service');
 
 
