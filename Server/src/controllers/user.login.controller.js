@@ -1,5 +1,5 @@
 const { validationResult } = require('express-validator');
-const findUser = require('../services/findUser.service');
+const {findUser} = require('../services/findUser.service');
 const {compairePassword} = require('../services/hashPassword.service');
 const genarateAuthToken = require('../services/genarateAuthToken.service');
 
@@ -35,11 +35,9 @@ async function loginUser(req,res) {
 
     return res.status(200).json({
         message: "Login successful",
-        user: user
-    })
-    
-
-    
+        user: user,
+        token:token
+    })      
 }
 
 module.exports = {loginUser};

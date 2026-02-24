@@ -1,8 +1,8 @@
 const { validationResult } = require('express-validator');
 const { createUser } = require('../services/createUser.service');
-const {hashPassword} = require('../services/hashPassword.service');
+const { hashPassword } = require('../services/hashPassword.service');
 const genarateAuthToken = require('../services/genarateAuthToken.service');
-
+const { findUser } = require('../services/findUser.service');
 
 async function registerUser(req, res) {
 
@@ -15,6 +15,14 @@ async function registerUser(req, res) {
     }
 
     const { firstName, middleName, lastName, email, password } = req.body;
+
+    const alreadyUser = await findUser(email);
+    if (alreadyUser) {
+        return res.status(409).json({
+            message: "User already exists"
+        })
+    }
+
     const hashedPassword = await hashPassword(password);
 
     const user = await createUser({
@@ -28,12 +36,11 @@ async function registerUser(req, res) {
     });
 
     const token = await genarateAuthToken(user._id);
-
     res.cookie("token", token);
 
     res.status(201).json({
         message: "User registered successfully",
-        user: user
+        user: user,
     });
 }
 

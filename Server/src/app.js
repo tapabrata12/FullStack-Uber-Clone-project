@@ -10,8 +10,4 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use('/api/auth', router);
 
-app.get('/', (req, res) => {
-    res.send("Hello");
-});
-
 module.exports = app;

@@ -318,3 +318,253 @@ compairePassword(userPassword, hashedPassword)  →  bcrypt.compare(userPassword
 ```
 
 > **Note:** `findUser` uses `.select("+password")` to temporarily include the hashed password from MongoDB solely for comparison — it is excluded from all other queries by default (`select: false` in the schema).
+
+---
+
+---
+
+## `GET /api/auth/profile`
+
+Returns the profile of the currently authenticated user. Requires a valid JWT token via cookie or `Authorization` header.
+
+> 🔒 **Protected Route** — requires the `authUserToken` middleware to pass.
+
+---
+
+## Request
+
+### Headers
+
+| Header          | Value                              | Notes                                |
+|-----------------|------------------------------------|--------------------------------------|
+| `Cookie`        | `token=<jwt>`                      | Automatically sent if set via login  |
+| `Authorization` | `Bearer <jwt>`                     | Alternative to cookie-based auth     |
+
+> Provide **either** the `token` cookie **or** the `Authorization: Bearer <jwt>` header. At least one is required.
+
+### Body
+
+No request body is required.
+
+---
+
+## Responses
+
+### ✅ `200 OK` — Profile Fetched Successfully
+
+Returns the authenticated user object attached to the request by the `authUserToken` middleware.
+
+```json
+{
+  "_id": "64f1a2b3c4d5e6f7a8b9c0d1",
+  "fullName": {
+    "firstName": "John",
+    "middleName": "William",
+    "lastName": "Doe"
+  },
+  "email": "john.doe@example.com",
+  "socketID": null,
+  "__v": 0
+}
+```
+
+> **Note:** The `password` field is **never** included in the response (`select: false` in the schema).
+
+---
+
+### ❌ `401 Unauthorized` — Missing or Blacklisted Token
+
+Returned when no token is provided, or the token has been blacklisted (i.e., the user has previously logged out).
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+---
+
+### ❌ `404 Not Found` — User Not Found
+
+Returned when the token is valid but the associated user no longer exists in the database.
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+---
+
+### ❌ `500 Internal Server Error` — Token Verification Failed
+
+Returned when the JWT verification fails (e.g., token is malformed or `JWT_SECRET` is wrong).
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+---
+
+## Internal Flow
+
+```
+GET /api/auth/profile
+        │
+        ▼
+ [Middleware: auth.userToken.js]
+  1. Reads token from cookie or Authorization header
+        │
+        ├── no token found → returns 401 "Unauthorized"
+        │
+        ▼
+  2. Calls findBlackListToken(token) → checks blacklist in MongoDB
+        │
+        ├── token is blacklisted → returns 401 "Unauthorized"
+        │
+        ▼
+  3. Calls verifyToken(token) → jwt.verify(token, JWT_SECRET)
+        │
+        ├── verification fails → returns 500 "Internal server error"
+        │
+        ▼
+  4. Calls findUserByID(decodedToken._id) → fetches user from MongoDB
+        │
+        ├── user not found → returns 404 "User not found"
+        │
+        ▼
+  5. Attaches user to req.user → calls next()
+        │
+        ▼
+ [Controller: user.profile.controller.js]
+  Returns 200 with req.user (the authenticated user object)
+```
+
+---
+
+---
+
+## `GET /api/auth/logout`
+
+Logs out the currently authenticated user by blacklisting their JWT token and clearing the token cookie. Requires a valid JWT token via cookie or `Authorization` header.
+
+> 🔒 **Protected Route** — requires the `authUserToken` middleware to pass.
+
+---
+
+## Request
+
+### Headers
+
+| Header          | Value          | Notes                               |
+|-----------------|----------------|-------------------------------------|
+| `Cookie`        | `token=<jwt>`  | Automatically sent if set via login |
+| `Authorization` | `Bearer <jwt>` | Alternative to cookie-based auth    |
+
+> Provide **either** the `token` cookie **or** the `Authorization: Bearer <jwt>` header. At least one is required.
+
+### Body
+
+No request body is required.
+
+---
+
+## Responses
+
+### ✅ `200 OK` — Logout Successful
+
+The token is blacklisted in MongoDB and the `token` cookie is cleared on the client.
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Missing or Blacklisted Token
+
+Returned when no token is present, or the token was already blacklisted (already logged out).
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+---
+
+### ❌ `404 Not Found` — User Not Found
+
+Returned when the token is valid but the associated user no longer exists.
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+---
+
+### ❌ `500 Internal Server Error` — Token Verification Failed
+
+Returned when JWT verification fails.
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+---
+
+## Internal Flow
+
+```
+GET /api/auth/logout
+        │
+        ▼
+ [Middleware: auth.userToken.js]
+  (Same flow as /profile — see above)
+  Validates token → checks blacklist → verifies JWT → finds user
+        │
+        ▼ (if all checks pass)
+ [Controller: user.logout.controller.js]
+  1. Reads token from cookie or Authorization header
+        │
+        ├── no token → returns 401 "Unauthorized"
+        │
+        ▼
+  2. Calls addToBlackList(token)
+        │
+        ▼
+ [Service: blackListUser.service.js]
+  Creates a new blackListToken document in MongoDB
+  (auto-expires after 24 hours via TTL index)
+        │
+        ▼
+ [Controller]
+  3. Clears the "token" cookie → res.clearCookie("token")
+  4. Returns 200 with { message: "Logout successful" }
+```
+
+---
+
+## Token Blacklist
+
+When a user logs out, their JWT is saved to the `blackListToken` collection in MongoDB. Every subsequent request that hits a **protected route** checks this collection via `findBlackListToken(token)` before proceeding.
+
+Blacklisted tokens are automatically purged from the database after **24 hours** using a MongoDB TTL index on the `createdAt` field.
+
+```
+addToBlackList(token)      →  blackListToken.create({ token })
+findBlackListToken(token)  →  blackListToken.findOne({ token })
+```
+
+| Field       | Type     | Description                                  |
+|-------------|----------|----------------------------------------------|
+| `token`     | `string` | The JWT string to blacklist (unique)         |
+| `createdAt` | `Date`   | Timestamp; document auto-deletes after 24 hrs |

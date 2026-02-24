@@ -8,4 +8,8 @@ async function findUser(email) {
     return user;
 }
 
-module.exports = findUser;
+async function findUserByID(_id) {
+    return await userModel.findById(_id);
+
+}
+module.exports = {findUser,findUserByID};
