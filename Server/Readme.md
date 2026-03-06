@@ -568,3 +568,215 @@ findBlackListToken(token)  →  blackListToken.findOne({ token })
 |-------------|----------|----------------------------------------------|
 | `token`     | `string` | The JWT string to blacklist (unique)         |
 | `createdAt` | `Date`   | Timestamp; document auto-deletes after 24 hrs |
+
+---
+
+---
+
+## `POST /api/auth/captain/register`
+
+Registers a new captain (driver) in the system. On success, returns the created captain object and sets a JWT token as an HTTP cookie.
+
+---
+
+## Request
+
+### Headers
+
+| Header         | Value              |
+|----------------|--------------------|
+| `Content-Type` | `application/json` |
+
+### Body
+
+The request body must be a **JSON object** with the following fields:
+
+#### Personal Information
+
+| Field        | Type     | Required | Constraints                              | Description              |
+|--------------|----------|----------|------------------------------------------|--------------------------|
+| `firstName`  | `string` | ✅ Yes   | Minimum **3** characters                 | Captain's first name     |
+| `middleName` | `string` | ❌ No    | Minimum **3** characters (if provided)   | Captain's middle name    |
+| `lastName`   | `string` | ❌ No    | Minimum **3** characters (if provided)   | Captain's last name      |
+| `email`      | `string` | ✅ Yes   | Valid email format · Must be unique      | Captain's email address  |
+| `password`   | `string` | ✅ Yes   | Minimum **6** characters                 | Captain's password       |
+
+#### Vehicle Information
+
+| Field         | Type      | Required | Constraints                                   | Description                          |
+|---------------|-----------|----------|-----------------------------------------------|--------------------------------------|
+| `colour`      | `string`  | ✅ Yes   | Minimum **3** characters                      | Vehicle colour                       |
+| `plateNumber` | `string`  | ✅ Yes   | Minimum **7** characters                      | Vehicle licence plate number         |
+| `capacity`    | `number`  | ✅ Yes   | Minimum **1**                                 | Passenger capacity of the vehicle    |
+| `vehicleType` | `string`  | ✅ Yes   | Must be one of: `"car"`, `"bike"`, `"auto"`   | Type of vehicle                      |
+| `isAvailable` | `boolean` | ❌ No    | `true` or `false` (defaults to `false`)       | Whether the captain is available     |
+
+### Example Request Body
+
+```json
+{
+  "firstName": "Alex",
+  "middleName": "Roy",
+  "lastName": "Smith",
+  "email": "alex.smith@example.com",
+  "password": "driver123",
+  "colour": "Black",
+  "plateNumber": "MH12AB1234",
+  "capacity": 4,
+  "vehicleType": "car",
+  "isAvailable": true
+}
+```
+
+> **Note:** `middleName`, `lastName`, and `isAvailable` are optional. If `isAvailable` is omitted it defaults to `false`.
+
+---
+
+## Responses
+
+### ✅ `201 Created` — Registration Successful
+
+Returns the newly created captain object. A `token` JWT cookie is also set on the response.
+
+```json
+{
+  "message": "Captain registered successfully",
+  "captain": {
+    "_id": "65a1b2c3d4e5f6a7b8c9d0e1",
+    "fullName": {
+      "firstName": "Alex",
+      "middleName": "Roy",
+      "lastName": "Smith"
+    },
+    "email": "alex.smith@example.com",
+    "isAvailable": true,
+    "vehicle": {
+      "colour": "Black",
+      "plateNumber": "MH12AB1234",
+      "capacity": 4,
+      "vehicleType": "car"
+    },
+    "location": {
+      "lat": null,
+      "long": null
+    },
+    "__v": 0
+  }
+}
+```
+
+> **Note:** The `password` field is **never** returned in the response. It is marked `select: false` in the schema.
+
+---
+
+### ❌ `400 Bad Request` — Validation Error
+
+Returned when one or more fields fail validation. The `errors` array lists each failing field.
+
+```json
+{
+  "errors": [
+    {
+      "type": "field",
+      "value": "Al",
+      "msg": "First name have to be atleast 3 characters long",
+      "path": "firstName",
+      "location": "body"
+    },
+    {
+      "type": "field",
+      "value": "xyz",
+      "msg": "Invalid vehicle type",
+      "path": "vehicleType",
+      "location": "body"
+    }
+  ]
+}
+```
+
+---
+
+### ❌ `409 Conflict` — Captain Already Exists
+
+Returned when the provided email is already registered as a captain.
+
+```json
+{
+  "message": "Captain already exists"
+}
+```
+
+---
+
+## Validation Rules Summary
+
+| Field         | Rule                                                        |
+|---------------|-------------------------------------------------------------|
+| `email`       | Required · Valid email format · Must be unique              |
+| `firstName`   | Required · Min length: **3**                                |
+| `middleName`  | Optional · If present, min length: **3**                    |
+| `lastName`    | Optional · If present, min length: **3**                    |
+| `password`    | Required · Min length: **6**                                |
+| `colour`      | Required · Min length: **3**                                |
+| `plateNumber` | Required · Min length: **7**                                |
+| `capacity`    | Required · Min value: **1**                                 |
+| `vehicleType` | Required · Enum: `"car"` \| `"bike"` \| `"auto"`           |
+| `isAvailable` | Optional · Must be a boolean (defaults to `false`)          |
+
+---
+
+## Internal Flow
+
+```
+POST /api/auth/captain/register
+        │
+        ▼
+ [Route: captain.routes.js]
+  express-validator checks all fields
+        │
+        ▼ (if validation passes)
+ [Controller: captain.register.controller.js]
+  1. Runs validationResult() — returns 400 on errors
+  2. Calls findCaptain(email) → checks if email already registered
+        │
+        ├── captain exists → returns 409 "Captain already exists"
+        │
+        ▼ (email is unique)
+  3. Calls hashPassword(password) → bcrypt hashed string
+  4. Calls createCaptain({ fullName, email, hashedPassword, isAvailable, vehicle })
+        │
+        ▼
+ [Service: createCaptain.service.js]
+  Validates all required fields then creates captain in MongoDB
+        │
+        ▼
+ [Service: genarateAuthToken.service.js]
+  Signs a JWT with the captain's _id using JWT_SECRET
+        │
+        ▼
+ [Controller]
+  Sets "token" cookie on the response
+  Returns 201 with { message, captain }
+```
+
+---
+
+## Password Security
+
+Passwords are hashed using **bcrypt** with a salt round of `10` before being stored. The plain-text password is **never** persisted.
+
+```
+hashPassword(password, salt = 10)  →  bcrypt.hash(password, 10)
+```
+
+---
+
+## Auth Token
+
+A **JWT** is generated using the captain's `_id` and the `JWT_SECRET` environment variable, then set as an HTTP cookie named `token`.
+
+```
+genarateAuthToken(captain._id)  →  jwt.sign({ _id }, JWT_SECRET)
+```
+
+> ⚠️ Make sure `JWT_SECRET` is defined in your `.env` file, otherwise token generation will fail.

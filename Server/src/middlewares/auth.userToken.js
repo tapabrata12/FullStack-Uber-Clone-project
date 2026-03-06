@@ -10,9 +10,10 @@ async function authUserToken(req, res, next) {
         return res.status(401).json({ message: "Unauthorized" });
     }
 
+    // In some cases already logged out user can try to access profile before re-login to prevent that we use this middleware
     const blackListToken = await findBlackListToken(token);
     if (blackListToken) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ message: "Unauthorized, user already logged out" });
     }
 
     try {
