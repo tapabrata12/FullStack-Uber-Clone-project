@@ -780,3 +780,185 @@ genarateAuthToken(captain._id)  →  jwt.sign({ _id }, JWT_SECRET)
 ```
 
 > ⚠️ Make sure `JWT_SECRET` is defined in your `.env` file, otherwise token generation will fail.
+
+---
+
+---
+
+## `POST /api/auth/captain/login`
+
+Authenticates an existing captain using their email and password. On success, returns the captain object and sets a JWT token as an HTTP cookie.
+
+---
+
+## Request
+
+### Headers
+
+| Header         | Value              |
+|----------------|--------------------|
+| `Content-Type` | `application/json` |
+
+### Body
+
+The request body must be a **JSON object** with the following fields:
+
+| Field      | Type     | Required | Constraints                   | Description               |
+|------------|----------|----------|-------------------------------|---------------------------|
+| `email`    | `string` | ✅ Yes   | Must be a valid email address | Registered captain email  |
+| `password` | `string` | ✅ Yes   | Minimum **6** characters      | Captain's password        |
+
+### Example Request Body
+
+```json
+{
+  "email": "alex.smith@example.com",
+  "password": "driver123"
+}
+```
+
+---
+
+## Responses
+
+### ✅ `200 OK` — Login Successful
+
+Returns the authenticated captain object. A `token` JWT cookie is also set on the response.
+
+```json
+{
+  "message": "Login successful !!",
+  "captain": {
+    "_id": "65a1b2c3d4e5f6a7b8c9d0e1",
+    "fullName": {
+      "firstName": "Alex",
+      "middleName": "Roy",
+      "lastName": "Smith"
+    },
+    "email": "alex.smith@example.com",
+    "isAvailable": true,
+    "vehicle": {
+      "colour": "Black",
+      "plateNumber": "MH12AB1234",
+      "capacity": 4,
+      "vehicleType": "car"
+    },
+    "location": {
+      "lat": null,
+      "long": null
+    },
+    "__v": 0
+  }
+}
+```
+
+> **Note:** The `password` field is **never** returned in the response (`select: false` in the schema). `findCaptain` uses `.select("+password")` internally only to validate the login attempt.
+
+---
+
+### ❌ `400 Bad Request` — Validation Error
+
+Returned when one or more fields fail validation.
+
+```json
+{
+  "errors": [
+    {
+      "type": "field",
+      "value": "not-an-email",
+      "msg": "Email doesn't valid",
+      "path": "email",
+      "location": "body"
+    },
+    {
+      "type": "field",
+      "value": "abc",
+      "msg": "Password must be atleast 6 characters long",
+      "path": "password",
+      "location": "body"
+    }
+  ]
+}
+```
+
+---
+
+### ❌ `404 Not Found` — Captain Not Found
+
+Returned when no captain is registered with the provided email.
+
+```json
+{
+  "message": "Captain not found, please register first"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Invalid Password
+
+Returned when the captain exists but the password does not match.
+
+```json
+{
+  "message": "Invalid password"
+}
+```
+
+---
+
+## Validation Rules Summary
+
+| Field      | Rule                             |
+|------------|----------------------------------|
+| `email`    | Required · Must be a valid email |
+| `password` | Required · Min length: **6**     |
+
+---
+
+## Internal Flow
+
+```
+POST /api/auth/captain/login
+        │
+        ▼
+ [Route: captain.routes.js]
+  express-validator checks email format and password length
+        │
+        ▼ (if validation passes)
+ [Controller: captain.login.controller.js]
+  1. Runs validationResult() — returns 400 on errors
+  2. Calls findCaptain(email) → queries MongoDB with .select("+password")
+        │
+        ├── captain not found → returns 404 "Captain not found, please register first"
+        │
+        ▼ (captain found)
+  3. Calls compairePassword(plainPassword, captain.password)
+     → bcrypt.compare() checks if passwords match
+        │
+        ├── passwords don't match → returns 401 "Invalid password"
+        │
+        ▼ (passwords match)
+  4. Calls genarateAuthToken(captain._id)
+        │
+        ▼
+ [Service: genarateAuthToken.service.js]
+  Signs a JWT with the captain's _id using JWT_SECRET
+        │
+        ▼
+ [Controller]
+  Sets "token" cookie on the response
+  Returns 200 with { message, captain }
+```
+
+---
+
+## Password Comparison
+
+The login flow uses **bcrypt** to compare the provided plain-text password against the stored hash.
+
+```
+compairePassword(password, captain.password)  →  bcrypt.compare(password, hashedPassword)
+```
+
+> **Note:** Unlike the user login (`/api/auth/user/login`) which returns a generic `"Invalid Credentials"` for both wrong email and password, the captain login returns **distinct error messages** — `404` for unknown email and `401` for a wrong password.

@@ -1,7 +1,8 @@
 const express = require('express');
 const { body } = require('express-validator');
-const captainRoutes = express.Router();
 const { registerCaptain } = require('../controllers/captain.register.controller');
+const { captainLogin } = require('../controllers/captain.login.controller');
+const captainRoutes = express.Router();
 // Register new captain
 captainRoutes.post('/register',
     [body("email").isEmail().withMessage("Invalid Email"),
@@ -15,6 +16,15 @@ captainRoutes.post('/register',
     body("plateNumber").isLength({ min: 7 }).withMessage("Plate number must be atleast 7 characters long"),
     body("capacity").isLength({ min: 1 }).withMessage("Capacity must be atleast 1 person"),
     body('vehicleType').isIn(['car', 'bike', 'auto']).withMessage('Invalid vehicle type')
-    ], registerCaptain);
+    ],
+    registerCaptain);
+
+// Login captain
+
+captainRoutes.post('/login',
+    [
+        body('email').isEmail().withMessage("Email doesn't valid"),
+        body("password").isLength({ min: 6 }).withMessage("Password must be atleast 6 characters long"),
+    ], captainLogin);
 
 module.exports = captainRoutes;

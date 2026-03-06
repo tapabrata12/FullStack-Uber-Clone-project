@@ -1,8 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-async function genarateAuthToken(_id, JWT_SECRET = process.env.JWT_SECRET,options = {
-    expiresIn: "24h" // Token expires in 24 hour
-}) {
+async function genarateAuthToken(_id, JWT_SECRET = process.env.JWT_SECRET,options = {expiresIn: "24h" // Token expires in 24 hour 
+    }) {
 
     try {
 
