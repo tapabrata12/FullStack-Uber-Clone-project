@@ -2,6 +2,9 @@ const express = require('express');
 const { body } = require('express-validator');
 const { registerCaptain } = require('../controllers/captain.register.controller');
 const { captainLogin } = require('../controllers/captain.login.controller');
+const authCaptainToken = require('../middlewares/auth.captainToken');
+const getCaptainProfile = require('../controllers/captain.profile.controller');
+
 const captainRoutes = express.Router();
 // Register new captain
 captainRoutes.post('/register',
@@ -26,5 +29,9 @@ captainRoutes.post('/login',
         body('email').isEmail().withMessage("Email doesn't valid"),
         body("password").isLength({ min: 6 }).withMessage("Password must be atleast 6 characters long"),
     ], captainLogin);
+
+// Profile of Captain
+
+captainRoutes.get('/profile', authCaptainToken,getCaptainProfile);
 
 module.exports = captainRoutes;

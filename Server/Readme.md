@@ -962,3 +962,161 @@ compairePassword(password, captain.password)  →  bcrypt.compare(password, hash
 ```
 
 > **Note:** Unlike the user login (`/api/auth/user/login`) which returns a generic `"Invalid Credentials"` for both wrong email and password, the captain login returns **distinct error messages** — `404` for unknown email and `401` for a wrong password.
+
+---
+
+---
+
+## `GET /api/auth/captain/profile`
+
+Returns the profile of the currently authenticated captain. Requires a valid JWT token via cookie or `Authorization` header.
+
+> 🔒 **Protected Route** — requires the `authCaptainToken` middleware to pass.
+
+---
+
+## Request
+
+### Headers
+
+| Header          | Value          | Notes                                |
+|-----------------|----------------|--------------------------------------|
+| `Cookie`        | `token=<jwt>`  | Automatically sent if set via login  |
+| `Authorization` | `Bearer <jwt>` | Alternative to cookie-based auth     |
+
+> Provide **either** the `token` cookie **or** the `Authorization: Bearer <jwt>` header. At least one is required.
+
+### Body
+
+No request body is required.
+
+---
+
+## Responses
+
+### ✅ `200 OK` — Profile Fetched Successfully
+
+Returns the authenticated captain object attached to the request by the `authCaptainToken` middleware.
+
+```json
+{
+  "_id": "65a1b2c3d4e5f6a7b8c9d0e1",
+  "fullName": {
+    "firstName": "Alex",
+    "middleName": "Roy",
+    "lastName": "Smith"
+  },
+  "email": "alex.smith@example.com",
+  "isAvailable": true,
+  "vehicle": {
+    "colour": "Black",
+    "plateNumber": "MH12AB1234",
+    "capacity": 4,
+    "vehicleType": "car"
+  },
+  "location": {
+    "lat": null,
+    "long": null
+  },
+  "__v": 0
+}
+```
+
+> **Note:** The `password` field is **never** included in the response (`select: false` in the schema).
+
+---
+
+### ❌ `401 Unauthorized` — Missing Token
+
+Returned when no token is found in the cookie or `Authorization` header.
+
+```json
+{
+  "message": "Unauthorized please Login !!"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Blacklisted Token
+
+Returned when the token has been blacklisted (i.e., the captain has previously logged out).
+
+```json
+{
+  "message": "Unauthorized, user already logged out"
+}
+```
+
+---
+
+### ❌ `404 Not Found` — Captain Not Found
+
+Returned when the token is valid but the associated captain no longer exists in the database.
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+---
+
+### ❌ `500 Internal Server Error` — Token Verification Failed
+
+Returned when JWT verification fails (e.g., token is malformed or `JWT_SECRET` mismatch).
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+---
+
+## Internal Flow
+
+```
+GET /api/auth/captain/profile
+        │
+        ▼
+ [Middleware: auth.captainToken.js]
+  1. Reads token from cookie or Authorization header
+        │
+        ├── no token → returns 401 "Unauthorized please Login !!"
+        │
+        ▼
+  2. Calls findBlackListToken(token) → checks blacklist in MongoDB
+        │
+        ├── token blacklisted → returns 401 "Unauthorized, user already logged out"
+        │
+        ▼
+  3. Calls verifyToken(token) → jwt.verify(token, JWT_SECRET)
+        │
+        ├── verification fails → returns 500 "Internal server error"
+        │
+        ▼
+  4. Calls findCaptainByID(decodedToken._id) → fetches captain from MongoDB
+        │
+        ├── captain not found → returns 404 "User not found"
+        │
+        ▼
+  5. Attaches captain to req.captain → calls next()
+        │
+        ▼
+ [Controller: captain.profile.controller.js]
+  Returns 200 with req.captain (the authenticated captain object)
+```
+
+---
+
+## Key Difference from User Profile Middleware
+
+The captain profile middleware (`auth.captainToken.js`) is **dedicated to captains** and differs from the user auth middleware (`auth.userToken.js`) in two ways:
+
+| Behaviour               | `auth.userToken.js`              | `auth.captainToken.js`                        |
+|-------------------------|----------------------------------|-----------------------------------------------|
+| No token message        | `"Unauthorized"`               | `"Unauthorized please Login !!"`             |
+| Blacklist message       | `"Unauthorized"`               | `"Unauthorized, user already logged out"`    |
+| Lookup service          | `findUserByID`                 | `findCaptainByID`                            |
+| Attached to request as  | `req.user`                     | `req.captain`                                |
