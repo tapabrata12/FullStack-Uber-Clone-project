@@ -1,6 +1,7 @@
-# Server API Documentation
+# **Server API Documentation**
+## **Authentication Routes:**
 
-## `POST /api/auth/register`
+## `POST /api/auth/user/register`
 
 Registers a new user in the system. On success, it returns the created user object and sets a JWT token as an HTTP cookie.
 
@@ -111,7 +112,7 @@ Returned when one or more fields fail validation. The `errors` array lists each 
 ## Internal Flow
 
 ```
-POST /api/auth/register
+POST /api/auth/user/register
         │
         ▼
  [Route: user.routes.js]
@@ -163,7 +164,7 @@ genarateAuthToken(user._id)  →  jwt.sign({ _id }, JWT_SECRET)
 
 ---
 
-## `POST /api/auth/login`
+## `POST /api/auth/user/login`
 
 Authenticates an existing user with their email and password. On success, it returns the user object and sets a JWT token as an HTTP cookie.
 
@@ -275,7 +276,7 @@ Returned when the email does not exist in the database **or** the password does 
 ## Internal Flow
 
 ```
-POST /api/auth/login
+POST /api/auth/user/login
         │
         ▼
  [Route: user.routes.js]
@@ -323,7 +324,7 @@ compairePassword(userPassword, hashedPassword)  →  bcrypt.compare(userPassword
 
 ---
 
-## `GET /api/auth/profile`
+## `GET /api/auth/user/profile`
 
 Returns the profile of the currently authenticated user. Requires a valid JWT token via cookie or `Authorization` header.
 
@@ -411,7 +412,7 @@ Returned when the JWT verification fails (e.g., token is malformed or `JWT_SECRE
 ## Internal Flow
 
 ```
-GET /api/auth/profile
+GET /api/auth/user/profile
         │
         ▼
  [Middleware: auth.userToken.js]
@@ -446,7 +447,7 @@ GET /api/auth/profile
 
 ---
 
-## `GET /api/auth/logout`
+## `GET /api/auth/user/logout`
 
 Logs out the currently authenticated user by blacklisting their JWT token and clearing the token cookie. Requires a valid JWT token via cookie or `Authorization` header.
 
@@ -524,7 +525,7 @@ Returned when JWT verification fails.
 ## Internal Flow
 
 ```
-GET /api/auth/logout
+GET /api/auth/user/logout
         │
         ▼
  [Middleware: auth.userToken.js]
@@ -1120,3 +1121,165 @@ The captain profile middleware (`auth.captainToken.js`) is **dedicated to captai
 | Blacklist message       | `"Unauthorized"`               | `"Unauthorized, user already logged out"`    |
 | Lookup service          | `findUserByID`                 | `findCaptainByID`                            |
 | Attached to request as  | `req.user`                     | `req.captain`                                |
+
+---
+
+---
+
+## `GET /api/auth/captain/logout`
+
+Logs out the currently authenticated captain by blacklisting their JWT token and clearing the token cookie. Requires a valid JWT token via cookie or `Authorization` header.
+
+> 🔒 **Protected Route** — requires the `authCaptainToken` middleware to pass.
+
+---
+
+## Request
+
+### Headers
+
+| Header          | Value          | Notes                                |
+|-----------------|----------------|--------------------------------------|
+| `Cookie`        | `token=<jwt>`  | Automatically sent if set via login  |
+| `Authorization` | `Bearer <jwt>` | Alternative to cookie-based auth     |
+
+> Provide **either** the `token` cookie **or** the `Authorization: Bearer <jwt>` header. At least one is required.
+
+### Body
+
+No request body is required.
+
+---
+
+## Responses
+
+### ✅ `200 OK` — Logout Successful
+
+The token is blacklisted in MongoDB and the `token` cookie is cleared on the client.
+
+```json
+{
+  "message": "Logout successful"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Missing Token (from middleware)
+
+Returned when no token is found in the cookie or `Authorization` header during the `authCaptainToken` middleware check.
+
+```json
+{
+  "message": "Unauthorized please Login !!"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Blacklisted Token (from middleware)
+
+Returned when the token is already blacklisted — the captain has previously logged out.
+
+```json
+{
+  "message": "Unauthorized, user already logged out"
+}
+```
+
+---
+
+### ❌ `401 Unauthorized` — Missing Token (from controller)
+
+Returned when the controller cannot find the token after the middleware passes (edge case).
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+---
+
+### ❌ `404 Not Found` — Captain Not Found
+
+Returned when the token is valid but the associated captain no longer exists in the database.
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+---
+
+### ❌ `500 Internal Server Error` — Token Verification Failed
+
+Returned when JWT verification fails (e.g., token malformed or `JWT_SECRET` mismatch).
+
+```json
+{
+  "message": "Internal server error"
+}
+```
+
+---
+
+## Internal Flow
+
+```
+GET /api/auth/captain/logout
+        │
+        ▼
+ [Middleware: auth.captainToken.js]
+  1. Reads token from cookie or Authorization header
+        │
+        ├── no token → returns 401 "Unauthorized please Login !!"
+        │
+        ▼
+  2. Calls findBlackListToken(token) → checks blacklist in MongoDB
+        │
+        ├── token blacklisted → returns 401 "Unauthorized, user already logged out"
+        │
+        ▼
+  3. Calls verifyToken(token) → jwt.verify(token, JWT_SECRET)
+        │
+        ├── verification fails → returns 500 "Internal server error"
+        │
+        ▼
+  4. Calls findCaptainByID(decodedToken._id) → fetches captain from MongoDB
+        │
+        ├── captain not found → returns 404 "User not found"
+        │
+        ▼
+  5. Attaches captain to req.captain → calls next()
+        │
+        ▼
+ [Controller: captain.logout.controller.js]
+  1. Re-reads token from cookie or Authorization header
+        │
+        ├── no token → returns 401 "Unauthorized" (edge case)
+        │
+        ▼
+  2. Calls addToBlackList(token) → persists token to MongoDB blacklist
+     (auto-expires after 24 hours via TTL index)
+        │
+        ▼
+  3. Clears the "token" cookie → res.clearCookie("token")
+  4. Returns 200 with { message: "Logout successful" }
+```
+
+---
+
+## Comparison: Captain Logout vs User Logout
+
+Both logout routes share the same core blacklisting logic via `blackListUser.service.js`, but differ in their auth middleware:
+
+| Behaviour                  | `/api/auth/user/logout`           | `/api/auth/captain/logout`                      |
+|----------------------------|-----------------------------------|-------------------------------------------------|
+| Auth middleware            | `auth.userToken.js`              | `auth.captainToken.js`                          |
+| No token (middleware)      | `"Unauthorized"`                | `"Unauthorized please Login !!"`               |
+| Blacklisted (middleware)   | `"Unauthorized"`                | `"Unauthorized, user already logged out"`      |
+| Successful logout message  | `"Logout successful"`           | `"Logout successful"`                          |
+| Cookie cleared             | `token`                         | `token`                                        |
+| Blacklist TTL              | 24 hours                        | 24 hours                                       |

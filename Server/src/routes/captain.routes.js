@@ -4,6 +4,7 @@ const { registerCaptain } = require('../controllers/captain.register.controller'
 const { captainLogin } = require('../controllers/captain.login.controller');
 const authCaptainToken = require('../middlewares/auth.captainToken');
 const getCaptainProfile = require('../controllers/captain.profile.controller');
+const captainLogout = require('../controllers/captain.logout.controller');
 
 const captainRoutes = express.Router();
 // Register new captain
@@ -33,5 +34,9 @@ captainRoutes.post('/login',
 // Profile of Captain
 
 captainRoutes.get('/profile', authCaptainToken,getCaptainProfile);
+
+// Logout Captain
+
+captainRoutes.get('/logout',authCaptainToken,captainLogout);
 
 module.exports = captainRoutes;
