@@ -38,7 +38,7 @@ const UserSignup = () => {
         <label className='font-medium' htmlFor="text">What is your name?</label>
 
         <div className='flex gap-2 mb-5'>
-          <input value={firstName} onChange={(e) => { setFirstName(e.target.value) }} required type="text" className='bg-[#eeeeee] w-[50%] text-xl px-4 py-2 rounded-lg ' placeholder='First' />
+          <input value={firstName} onChange={(e) => { setFirstName(e.target.value) }} required type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='First' />
           <input value={middleName} onChange={(e) => { setMiddleName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='Middle' />
           <input value={lastName} onChange={(e) => { setLastName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%]  px-4 py-2 rounded-lg ' placeholder='Last' />
         </div>

@@ -33,7 +33,7 @@ const CaptainLogin = () => {
 
       </form>
       <p className='pl-5 pr-5 w-full flex justify-center gap-2'>
-        New to Uber? <Link to={"/captain-signup"} className='text-blue-400 no-underline hover:underline'>Login</Link>
+        New to Uber? <Link to={"/captain-signup"} className='text-blue-400 no-underline hover:underline'>Create Account</Link>
       </p>
       <footer className='p-5 pr-5 w-full flex justify-center gap-2 tracking-wide text-xs mt-auto text-[#5E5E5E] leading-tight'>
         By continuing, you agree to calls, including by autodialer, WhatsApp, or texts from Uber and its affiliates.

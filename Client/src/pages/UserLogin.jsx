@@ -24,10 +24,10 @@ const UserLogin = () => {
 
       <form className='flex flex-col gap-5 p-5' onSubmit={(e) => { submitHadelar(e) }}>
         <label className='font-medium' htmlFor="email">Enter your email address</label>
-        <input value={email} onChange={(e) => { setEmail(e.target.value) }} className='bg-[#eeeeee] w-full text-xl px-4 py-2 rounded-lg ' required type="email" placeholder='email@email.com' />
+        <input value={email} onChange={(e) => { setEmail(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg ' required type="email" placeholder='email@email.com' />
         <label className='font-medium' htmlFor="password">Enter your password</label>
-        <input value={password} onChange={(e) => { setPassword(e.target.value) }} className='bg-[#eeeeee] w-full text-xl px-4 py-2 rounded-lg' required type="password" placeholder='myPass@134' />
-        <input className='bg-[#111] w-full text-xl text-white px-4 py-2 rounded-lg cursor-pointer active:scale-95' type="submit" value={"Login"} />
+        <input value={password} onChange={(e) => { setPassword(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg' required type="password" placeholder='myPass@134' />
+        <input className='bg-[#111] w-full text-white px-4 py-2 rounded-lg cursor-pointer active:scale-95' type="submit" value={"Login"} />
 
       </form>
       <p className='pl-5 pr-5 w-full flex justify-center gap-2 tracking-wide'>
