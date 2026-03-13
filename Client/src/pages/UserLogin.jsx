@@ -1,17 +1,32 @@
 import whiteLogo from '../assets/Logo3.png'
-import { Link } from 'react-router-dom';
-import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useContext, useState } from 'react';
+import axios from 'axios';
+import { UserDataContext } from "../context/UserContext";
+
 const UserLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userDetails, setUserdetails] = useState({});
-  function submitHadelar(e) {
+  const {user, setUser } = useContext(UserDataContext);
+
+  const navigate = useNavigate();
+  async function submitHadelar(e) {
     e.preventDefault();
-    setUserdetails({
+
+    const userData = {
       email: email,
       password: password
-    });
+    }
 
+    const response = await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/user/login`, userData);
+
+    if (response.status === 200) {
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      console.log(user);
+      
+      navigate('/home');
+    }
     setEmail('');
     setPassword('');
   }
