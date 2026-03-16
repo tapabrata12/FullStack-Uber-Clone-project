@@ -6,7 +6,7 @@ async function authUserToken(req, res, next) {
 
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
-    if (!token) {
+    if (!token || token === 'null' || token === 'undefined') {
         return res.status(401).json({ message: "Unauthorized" });
     }
 

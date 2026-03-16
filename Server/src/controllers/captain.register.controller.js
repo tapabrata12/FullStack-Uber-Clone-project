@@ -48,6 +48,7 @@ async function registerCaptain(req, res) {
     res.status(201).json({
         message: "Captain registered successfully",
         captain,
+        token
     });
 }
 

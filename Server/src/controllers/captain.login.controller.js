@@ -30,7 +30,8 @@ async function captainLogin(req, res) {
 
     return res.status(200).json({
         message: "Login successful !!",
-        captain
+        captain,
+        token
     });
 
 }

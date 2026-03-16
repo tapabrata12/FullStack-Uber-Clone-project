@@ -6,7 +6,7 @@ async function authCaptainToken(req, res, next) {
 
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
-    if (!token) {
+    if (!token || token === 'null' || token === 'undefined') {
         return res.status(401).json({ message: "Unauthorized please Login !!" });
     }
 
@@ -24,8 +24,7 @@ async function authCaptainToken(req, res, next) {
         if (!captain) {
             return res.status(404).json({ message: "User not found" });
         }
-        req.captain = captain;
-
+        
         return next();
 
     } catch (error) {

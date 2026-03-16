@@ -61,15 +61,15 @@ const UserSignup = () => {
         <label className='font-medium' htmlFor="text">What is your name?</label>
 
         <div className='flex gap-2 mb-5'>
-          <input value={firstName} minLength="3" onChange={(e) => { setFirstName(e.target.value) }} required type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='First' />
-          <input value={middleName} minLength="3" onChange={(e) => { setMiddleName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='Middle' />
-          <input value={lastName} minLength="3" onChange={(e) => { setLastName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%]  px-4 py-2 rounded-lg ' placeholder='Last' />
+          <input value={firstName} minLength={3} onChange={(e) => { setFirstName(e.target.value) }} required type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='First' />
+          <input value={middleName} minLength={3} onChange={(e) => { setMiddleName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%] px-4 py-2 rounded-lg ' placeholder='Middle' />
+          <input value={lastName} minLength={3} onChange={(e) => { setLastName(e.target.value) }} type="text" className='bg-[#eeeeee] w-[50%]  px-4 py-2 rounded-lg ' placeholder='Last' />
         </div>
 
         <label className='font-medium' htmlFor="email">Enter your email address</label>
-        <input value={email} onChange={(e) => { setEmail(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg ' required type="email" placeholder='email@email.com' />
+        <input value={email} onChange={(e) => { setEmail(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg ' required type="email" minLength={5} placeholder='email@email.com' />
         <label className=' font-medium' htmlFor="password">Enter your password</label>
-        <input value={password} minLength="6" onChange={(e) => { setPassword(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg' required type="password" placeholder='myPass@134' />
+        <input value={password} minLength={6} onChange={(e) => { setPassword(e.target.value) }} className='bg-[#eeeeee] w-full px-4 py-2 rounded-lg' required type="password" placeholder='myPass@134' />
         <input className='bg-[#111] w-full text-white px-4 py-2 rounded-lg cursor-pointer active:scale-95 mt-5' type="submit" value={"Create Account"} />
 
       </form>

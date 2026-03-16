@@ -1,19 +1,33 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import whiteLogo from '../assets/Logo3.png'
-import { Link } from 'react-router-dom';
+import { CaptainDataContext } from "../context/CaptainContext";
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios'
 
 const CaptainLogin = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [captainDetails, setCaptaindetails] = useState({});
-  function submitHadelar(e) {
+  const { setCaptainData } = useContext(CaptainDataContext);
+
+  async function submitHadelar(e) {
     e.preventDefault();
-    setCaptaindetails({
+    const captainDetails = {
       email: email,
       password: password
+    };
+
+    await axios.post(`${import.meta.env.VITE_BASE_URL}/api/auth/captain/login`, captainDetails).then((responce) => {
+      if (responce.status === 200) {
+        localStorage.setItem('token', responce.data.token);
+        setCaptainData(responce.data.captain);
+        navigate('/captain-home');
+      }
+    }).catch((err) => {
+      console.log(err);
+
     });
 
-    console.log(captainDetails);
     setEmail('');
     setPassword('');
   }
